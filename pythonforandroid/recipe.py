@@ -1326,6 +1326,20 @@ class PyProjectRecipe(PythonRecipe):
         build_args = [
             "-m",
             "build",
+            # Disable PEP 517 isolated venv creation. hostpython3 is built
+            # without ensurepip, so venv+pip and virtualenv+pip both fail to
+            # bootstrap pip inside the isolated environment → BackendUnavailable.
+            # With isolation disabled, build uses the existing PYTHONPATH
+            # (set by p4a to hostpython3's site-packages) where all required
+            # build backends are already installed via hostpython_prerequisites.
+            "--no-isolation",
+            # With --no-isolation, `build` still validates [build-system] requires
+            # against importlib.metadata before invoking the backend. p4a's
+            # non-standard PYTHONPATH layout (source tree + native-build paths)
+            # prevents reliable version detection, causing false "Missing
+            # dependencies" failures even when packages are present. Skipping
+            # this check is safe — the backend itself will fail if truly missing.
+            "--skip-dependency-check",
             "--wheel",
             "--config-setting",
             "builddir={}".format(sub_build_dir),
